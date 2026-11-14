@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build outputs & compiled binaries
+build/
+bin/
+obj/
+*.exe
+*.o
+*.obj
+*.a
+*.lib
+*.dll
+*.so
+*.dylib
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Runtime & recovery artifacts
+*.log
+recovery.log
+recovery_report.txt
+gallery.html
+.neurorecover_checkpoint.json
+recovered/
+recovered*/
+out/
+test_output/
+*.meta.json
+*.records.json
+
+# IDE & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.tmp

@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NeuroRecover AI v5.1</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<script src="/js/app.js"></script>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="logo" onclick="gp('home')"><div class="logo-ic">NR</div>Neuro<em>Recover</em></div>
+  <div class="ver">v5.1</div>
+  <span class="badge b-off" id="modeBadge">● Connecting</span>
+  <div class="nsp"></div>
+  <button class="nbtn on" id="n-home"    onclick="gp('home')">Home</button>
+  <button class="nbtn"    id="n-recover" onclick="gp('recover')">Recovery</button>
+  <button class="nbtn"    id="n-how"     onclick="gp('how')">How It Works</button>
+  <button class="ai-tog"  onclick="toggleAI()">✦ AI Assistant</button>
+</nav>
+
+<div class="adm" id="admBan">
+  <div style="font-size:18px">🔴</div>
+  <div style="font-size:11px;color:var(--red);flex:1"><strong>Not running as Administrator!</strong> Raw disk access will fail. Fix: Close PowerShell → right-click → "Run as Administrator" → node server.js</div>
+</div>
+
+<div class="app">
+
+<!-- HOME -->
+<div id="pg-home" class="pg on">
+  <div class="hero">
+    <div class="hero-pill">✦ AI-Powered · Real Thumbnails · v5.1</div>
+    <h1 class="hero-h">Recover Every File<br>You Thought Was <span class="gr">Gone Forever</span></h1>
+    <p class="hero-p">NeuroRecover AI scans at raw byte level — recovering deleted photos, videos, audio and documents. Preview real thumbnails before recovering.</p>
+    <div class="hbtns">
+      <button class="btn b-cy b-lg" onclick="gp('recover')">🚀 Start Recovery</button>
+      <button class="btn b-sec b-lg" onclick="gp('how')">How It Works</button>
+      <button class="btn b-pur b-lg" onclick="toggleAI()">✦ Ask AI</button>
+    </div>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="stn">57+</div><div class="stl">File Signatures</div></div>
+    <div class="stat"><div class="stn">Real</div><div class="stl">Thumbnails</div></div>
+    <div class="stat"><div class="stn">100%</div><div class="stl">Read-Only Safe</div></div>
+    <div class="stat"><div class="stn">AI</div><div class="stl">Smart Analysis</div></div>
+  </div>
+  <div class="feats">
+    <div style="text-align:center"><h2 style="font-size:22px;font-weight:700;margin-bottom:6px">Everything It Recovers</h2><p style="color:var(--t2);font-size:13px">57+ formats with real photo/video preview thumbnails</p></div>
+    <div class="fgrid">
+      <div class="fc"><div class="fci">🖼️</div><div class="fch">Photos & RAW — with Real Previews</div><div class="fcp">JPEG, PNG, GIF, BMP, HEIC, WebP, PSD. RAW: CR2, NEF, ARW, RAF, DNG. See actual thumbnail previews before recovering.</div></div>
+      <div class="fc"><div class="fci">🎬</div><div class="fch">Videos Any Length</div><div class="fcp">MP4, MOV, AVI, MKV, FLV, WMV, WebM. Click to preview. Repairs moov atoms, AVI indexes, RIFF headers automatically.</div></div>
+      <div class="fc"><div class="fci">🎵</div><div class="fch">Audio & Music</div><div class="fcp">MP3, WAV, FLAC, M4A, OGG, AAC, WMA. ID3 tag-based MP3 carving. Recovers complete music libraries.</div></div>
+      <div class="fc"><div class="fci">📄</div><div class="fch">Documents & Archives</div><div class="fcp">PDF, Word, Excel, PowerPoint, ZIP, RAR, 7Z. Identified by magic byte signatures not file names.</div></div>
+      <div class="fc"><div class="fci">✦</div><div class="fch">Claude AI Integration</div><div class="fcp">Analyzes results, suggests optimal scan settings, explains encryption, guides your recovery plan.</div></div>
+      <div class="fc"><div class="fci">🔧</div><div class="fch">Auto File Repair</div><div class="fcp">JPEG markers, BMP headers, PNG chunks, MP4 moov atoms. Repaired files replace originals. Works on existing 1288+ already-recovered files.</div></div>
+    </div>
+    <div style="text-align:center;margin-top:28px"><button class="btn b-cy b-lg" onclick="gp('recover')">🚀 Start Recovery Now</button></div>
+  </div>
+</div>
+
+<!-- RECOVER -->
+<div id="pg-recover" class="pg">
+  <div class="rl">
+    <aside class="sb">
+      <div class="sbs">
+        <div class="warn-c" id="adminWarn" style="display:none">
+          <p>🔴 <strong>Not Administrator!</strong><br>Raw disk access needs admin.</p>
+          <div style="font-family:var(--fm);font-size:10px;color:rgba(241,76,76,.8);line-height:1.8">1. Close PowerShell<br>2. Search PowerShell<br>3. Right-click → Run as Admin<br>4. cd to NeuroRecover<br>5. node server.js</div>
+        </div>
+        <div class="build-c" id="buildCard" style="display:none">
+          <p>⚠️ Engine not built yet.<br>Click to compile (~30 seconds).</p>
+          <button class="btn b-amb b-sm" style="width:100%;justify-content:center" id="buildBtn" onclick="doBuild()">🔨 Build Engine</button>
+        </div>
+        <div class="ok-c" id="exeOk" style="display:none">✅ Engine ready</div>
+
+        <div class="card">
+          <div class="clbl">Target Device</div>
+          <select class="csel" id="drv" style="margin-bottom:7px"></select>
+          <div class="clbl" style="margin-top:2px">Output Folder</div>
+          <input class="cinp" id="outd" value="C:\recovered" style="margin-bottom:9px">
+          <button class="btn b-cy" style="width:100%;justify-content:center;margin-bottom:4px" id="scanBtn" onclick="doScan()">🔍 Start Full Scan</button>
+          <div style="display:flex;gap:4px;margin-bottom:4px">
+            <button class="btn b-ghost b-sm" style="flex:1;justify-content:center;font-size:10px" onclick="quickScan('photos')">📷 Photos</button>
+            <button class="btn b-ghost b-sm" style="flex:1;justify-content:center;font-size:10px" onclick="quickScan('videos')">🎬 Videos</button>
+            <button class="btn b-ghost b-sm" style="flex:1;justify-content:center;font-size:10px" onclick="quickScan('audio')">🎵 Audio</button>
+          </div>
+          <button class="btn b-ghost b-sm" style="width:100%;justify-content:center;display:none" id="stopBtn" onclick="stopScan()">⏹ Stop Scan</button>
+        </div>
+
+        <div style="display:flex;gap:4px;margin-bottom:8px">
+          <button class="btn b-sec b-sm" style="flex:1;justify-content:center;font-size:10px" onclick="loadFromDisk()">📂 Load Files</button>
+          <button class="btn b-pur b-sm" style="flex:1;justify-content:center;font-size:10px" onclick="getAISuggest()">✦ AI Suggest</button>
+        </div>
+        <div id="aiCard"></div>
+      </div>
+
+      <div class="sdiv"></div>
+
+      <div class="sbs">
+        <div class="sblbl">File Types</div>
+        <button class="si on" onclick="fcat('all')"      id="f-all">      <span class="si-ic">📁</span>All Files<span class="si-n" id="c-all">0</span></button>
+        <button class="si"    onclick="fcat('image')"    id="f-image">    <span class="si-ic">🖼️</span>Photos   <span class="si-n" id="c-image">0</span></button>
+        <button class="si"    onclick="fcat('video')"    id="f-video">    <span class="si-ic">🎬</span>Videos   <span class="si-n" id="c-video">0</span></button>
+        <button class="si"    onclick="fcat('audio')"    id="f-audio">    <span class="si-ic">🎵</span>Audio    <span class="si-n" id="c-audio">0</span></button>
+        <button class="si"    onclick="fcat('document')" id="f-document"> <span class="si-ic">📄</span>Documents<span class="si-n" id="c-document">0</span></button>
+        <button class="si"    onclick="fcat('archive')"  id="f-archive">  <span class="si-ic">📦</span>Archives <span class="si-n" id="c-archive">0</span></button>
+        <button class="si"    onclick="fcat('raw')"      id="f-raw">      <span class="si-ic">📷</span>RAW Cam  <span class="si-n" id="c-raw">0</span></button>
+      </div>
+
+      <div class="sdiv"></div>
+
+      <div class="sbs">
+        <div class="sblbl">Scan Options</div>
+        <label class="opt"><input type="checkbox" id="od" checked>🔍 Deep Scan</label>
+        <label class="opt"><input type="checkbox" id="om">📍 Extract EXIF/GPS</label>
+        <label class="opt"><input type="checkbox" id="op">🖼️ Generate Gallery</label>
+        <label class="opt"><input type="checkbox" id="oc">💾 Checkpoint (resume)</label>
+        <label class="opt"><input type="checkbox" id="oq">🗄️ SQLite Recovery</label>
+        <label class="opt"><input type="checkbox" id="ors">🔄 Resume Previous</label>
+      </div>
+
+      <div class="sdiv"></div>
+
+      <div class="sbs">
+        <div class="sblbl">Live Status</div>
+        <div class="sg">
+          <div class="sc"><div class="scv" id="ss">Ready</div><div class="scl">Status</div></div>
+          <div class="sc"><div class="scv" id="sf" style="color:var(--grn)">0</div><div class="scl">Found</div></div>
+          <div class="sc"><div class="scv" id="sc2" style="color:var(--cy)">—</div><div class="scl">Scanned</div></div>
+          <div class="sc"><div class="scv" id="se">—</div><div class="scl">ETA</div></div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="tb">
+        <span class="tbtl">Recovery Tool</span>
+        <div class="tsp"></div>
+        <div class="sbox"><span style="color:var(--t3)">⌕</span><input type="text" id="srch" placeholder="Search files..." oninput="applyF()"></div>
+        <div class="vtog">
+          <button class="vb on" id="vg" onclick="sv('grid')" title="Grid">⊞</button>
+          <button class="vb"    id="vl" onclick="sv('list')" title="List">☰</button>
+        </div>
+        <button class="btn b-pur b-sm" id="aiAnalBtn" style="display:none" onclick="aiAnalyze(false)">✦ AI Analyze</button>
+      </div>
+
+      <!-- CHIPS -->
+      <div class="chips" id="chipbar" style="display:none">
+        <div class="chip on" onclick="fext('all')">All<span class="chip-n" id="ch-all">0</span></div>
+        <div class="chip" onclick="fext('jpg')">JPG<span class="chip-n" id="ch-jpg">0</span></div>
+        <div class="chip" onclick="fext('png')">PNG<span class="chip-n" id="ch-png">0</span></div>
+        <div class="chip" onclick="fext('bmp')">BMP<span class="chip-n" id="ch-bmp">0</span></div>
+        <div class="chip" onclick="fext('mp4')">MP4<span class="chip-n" id="ch-mp4">0</span></div>
+        <div class="chip" onclick="fext('mov')">MOV<span class="chip-n" id="ch-mov">0</span></div>
+        <div class="chip" onclick="fext('avi')">AVI<span class="chip-n" id="ch-avi">0</span></div>
+        <div class="chip" onclick="fext('mkv')">MKV<span class="chip-n" id="ch-mkv">0</span></div>
+        <div class="chip" onclick="fext('mp3')">MP3<span class="chip-n" id="ch-mp3">0</span></div>
+        <div class="chip" onclick="fext('pdf')">PDF<span class="chip-n" id="ch-pdf">0</span></div>
+        <div class="chip" onclick="fext('cr2')">RAW<span class="chip-n" id="ch-cr2">0</span></div>
+      </div>
+
+      <!-- IDLE -->
+      <div class="state" id="st-idle">
+        <div class="st-ic">💾</div>
+        <div class="st-h" id="idleH">Select Drive & Start Scan</div>
+        <div class="st-p" id="idleP">Choose your USB/SD drive and click Start Scan. Completely read-only. Use "📂 Load Files" to browse already-recovered files.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+          <button class="btn b-cy b-lg" onclick="doScan()">🔍 Start Scan</button>
+          <button class="btn b-sec"    onclick="loadFromDisk()">📂 Load Existing Files</button>
+        </div>
+      </div>
+
+      <!-- SCANNING -->
+      <div class="state" id="st-scan" style="display:none">
+        <div class="spinner">
+          <svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="35" fill="none" stroke="rgba(0,217,245,.1)" stroke-width="5"/><circle cx="40" cy="40" r="35" fill="none" stroke="var(--cy)" stroke-width="5" stroke-linecap="round" stroke-dasharray="55 165" style="filter:drop-shadow(0 0 6px var(--cy))"/></svg>
+          <div class="sp-in">🔍</div>
+        </div>
+        <div class="st-h">Scanning Drive...</div>
+        <div id="scdev" style="color:var(--t2);font-size:13px;margin-bottom:4px">Reading device...</div>
+        <div id="scanEst" style="font-size:11px;color:var(--t3);margin-bottom:8px;font-family:var(--fm)"></div>
+        <div class="pw">
+          <div class="pbg"><div class="pfl" id="pb"></div></div>
+          <div class="pr"><span id="p1">0 MB</span><span id="p2" style="color:var(--cy);font-weight:600">0%</span><span id="p3">Calculating...</span></div>
+        </div>
+        <div class="lives">
+          <div class="li"><div class="li-n" id="lv0">0</div><div class="li-l">Total</div></div>
+          <div class="li"><div class="li-n" id="lv1" style="color:var(--amb)">0</div><div class="li-l">Photos</div></div>
+          <div class="li"><div class="li-n" id="lv2" style="color:var(--pur)">0</div><div class="li-l">Videos</div></div>
+          <div class="li"><div class="li-n" id="lv3" style="color:var(--grn)">0</div><div class="li-l">Audio</div></div>
+        </div>
+        <div class="logb" id="logb"></div>
+        <div class="sleep-pill" id="sleepPill" style="display:none">☀️ Sleep prevention active</div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn b-sec b-sm" onclick="toggleLiveView()">👁 View Files Found</button>
+          <button class="btn b-red b-sm" onclick="stopScan()">⏹ Stop</button>
+        </div>
+      </div>
+
+      <!-- ERROR -->
+      <div class="state" id="st-error" style="display:none">
+        <div class="st-ic">⚠️</div>
+        <div class="st-h" id="errTitle">Error</div>
+        <div class="err-box"><h3 id="errHead">Error</h3><pre id="errBody"></pre></div>
+        <button class="btn b-cy" onclick="sh('st-error',0);sh('st-idle',1)">← Try Again</button>
+      </div>
+
+      <!-- RESULTS -->
+      <div id="st-res" style="display:none;flex-direction:column;flex:1;overflow:hidden;min-height:0">
+        <div class="selbar" id="selbar" style="display:none">
+          <input type="checkbox" id="saChk" onchange="selAll(this.checked)">
+          <label for="saChk" style="cursor:pointer;color:var(--cy);font-size:12px">Select all <strong id="saN">0</strong> files</label>
+          <div style="margin-left:auto"><button class="btn b-ghost b-sm" onclick="clrSel()">Clear</button></div>
+        </div>
+        <div class="fa" id="fa">
+          <div class="fg2" id="fg"></div>
+          <div class="empty" id="emp" style="display:none"><div style="font-size:36px;margin-bottom:12px;opacity:.5">🔎</div><div>No files match your filter</div></div>
+        </div>
+      </div>
+
+      <!-- SCAN STATUS FOOTER (EaseUS-style — grid stays visible while this runs) -->
+      <div class="abar" id="scanFooter" style="display:none;background:var(--bg2)">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="spinner" style="width:20px;height:20px;margin:0">
+            <svg viewBox="0 0 80 80" style="width:20px;height:20px"><circle cx="40" cy="40" r="35" fill="none" stroke="rgba(0,217,245,.15)" stroke-width="10"/><circle cx="40" cy="40" r="35" fill="none" stroke="var(--cy)" stroke-width="10" stroke-linecap="round" stroke-dasharray="55 165"/></svg>
+          </div>
+          <div class="ai2"><strong>Advanced Scanning</strong></div>
+        </div>
+        <div class="ai2">Found: <strong id="ftFound">0</strong> files, <strong id="ftSize">0 MB</strong> | Scanned: <strong id="ftPct">0%</strong></div>
+        <div class="tsp"></div>
+        <button class="btn b-ghost b-sm" onclick="stopScan()">⏹ Stop</button>
+      </div>
+
+      <!-- ACTION BAR -->
+      <div class="abar" id="abar" style="display:none">
+        <div class="ai2"><strong id="selN">0</strong> selected · <strong id="selSz">0 B</strong></div>
+        <div class="tsp"></div>
+        <button class="btn b-ghost b-sm" onclick="selByType('image')">📷 Photos</button>
+        <button class="btn b-ghost b-sm" onclick="selByType('video')">🎬 Videos</button>
+        <button class="btn b-ghost b-sm" onclick="selByType('audio')">🎵 Audio</button>
+        <button class="btn b-ghost b-sm" onclick="selAll(true)">☑ All</button>
+        <button class="btn b-grn" id="recBtn" onclick="om('recModal')" disabled>⬇ Recover Selected</button>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<div id="pg-how" class="pg" style="flex-direction:column"><div class="how-wrap">
+  <h1 style="font-size:26px;font-weight:700;margin-bottom:8px">How NeuroRecover AI Works</h1>
+  <p style="color:var(--t2);font-size:13px;margin-bottom:28px">6-phase AI-assisted pipeline — completely read-only.</p>
+  <div class="step"><div class="sn2">01</div><div><div class="sh2">🔍 Filesystem Detection</div><div class="sp2">Reads boot sector to identify NTFS, FAT32, exFAT, ext4, HFS+, APFS. Falls back to raw carving for formatted drives. Detects BitLocker, VeraCrypt, LUKS encryption.</div></div></div>
+  <div class="step"><div class="sn2">02</div><div><div class="sh2">⛏️ Raw File Carving</div><div class="sp2">Scans every byte using 57+ magic-byte signatures across 16 threads. 128MB read buffers. Zero-block skipping. Real thumbnails served immediately as each file is found.</div></div></div>
+  <div class="step"><div class="sn2">03</div><div><div class="sh2">✦ AI Boundary Detection</div><div class="sp2">Shannon entropy analysis finds natural file endings. Claude AI suggests optimal settings for your device.</div></div></div>
+  <div class="step"><div class="sn2">04</div><div><div class="sh2">🔧 Auto File Repair</div><div class="sp2">Repairs JPEG SOI/EOI, PNG IHDR/IEND, BMP headers, MP4 moov atoms, AVI idx1. Repaired files replace originals. Tagged in UI as FIXED.</div></div></div>
+  <div class="step"><div class="sn2">05</div><div><div class="sh2">🗄️ SQLite Deep Recovery</div><div class="sp2">Carves deleted rows from SQLite databases — WhatsApp, SMS, contacts, browser history — even years after deletion.</div></div></div>
+  <div class="step"><div class="sn2">06</div><div><div class="sh2">📊 Report & Gallery</div><div class="sp2">Generates recovery_report.txt and gallery.html. Claude AI analyzes results, identifies best files, gives personalized next steps.</div></div></div>
+  <div style="text-align:center;margin-top:24px"><button class="btn b-cy b-lg" onclick="gp('recover')">🚀 Start Recovery</button></div>
+</div></div>
+
+</div><!-- .app -->
+
+<!-- AI PANEL -->
+<div class="ai-panel" id="aiPanel">
+  <div class="ai-hd">
+    <div style="width:24px;height:24px;border-radius:6px;background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.22);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--pur)">✦</div>
+    <div class="ai-title">AI Assistant</div><div class="ai-badge">Claude</div>
+    <button class="ai-cl" onclick="toggleAI()">✕</button>
+  </div>
+  <div class="ai-msgs" id="aiMsgs">
+    <div class="am bot">Hi! I'm NeuroRecover AI powered by Claude.
+
+I can:
+• Suggest best scan settings for your drive
+• Analyze scan results and identify intact files
+• Help fix files that won't open
+• Answer any data recovery question
+
+What would you like help with?</div>
+  </div>
+  <div class="ai-suggs">
+    <div class="ai-sg" onclick="ask('Best settings for recovering old deleted photos from a 128GB USB drive?')">Best photo settings</div>
+    <div class="ai-sg" onclick="ask('My USB was accidentally formatted. Can I still recover files?')">Formatted drive</div>
+    <div class="ai-sg" onclick="ask('Some recovered JPG files won\\'t open and show as corrupted. How to fix them?')">Fix corrupted images</div>
+    <div class="ai-sg" onclick="ask('The scan shows 0 files or exits with code 1. What is wrong?')">Scan returns 0 files</div>
+    <div class="ai-sg" onclick="ask('How long does a 128GB USB take to scan? How to make it faster?')">How long / faster?</div>
+  </div>
+  <div class="ai-iw">
+    <textarea class="ai-inp" id="aiInp" rows="2" placeholder="Ask anything about data recovery..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAI();}"></textarea>
+    <button class="btn b-pur b-sm" onclick="sendAI()">→</button>
+  </div>
+</div>
+
+<!-- PHOTO PREVIEW LIGHTBOX -->
+<div class="prev-ovl" id="prevOvl" onclick="if(event.target===this)closePrev()">
+  <div class="prev-selbar">
+    <input type="checkbox" id="prevSelChk" onchange="togglePrevSel(this.checked)">
+    <label for="prevSelChk">Select this file</label>
+  </div>
+  <div class="prev-img-wrap" id="prevWrap"></div>
+  <button class="prev-nav left" onclick="prevFile()">‹</button>
+  <button class="prev-nav right" onclick="nextFile()">›</button>
+  <button class="prev-close" onclick="closePrev()">✕</button>
+  <div class="prev-info" id="prevInfo">
+    <div class="pi-name" id="prevName"></div>
+    <div id="prevMeta"></div>
+  </div>
+</div>
+
+<!-- RECOVER MODAL -->
+<div class="ovl" id="recModal">
+  <div class="modal">
+    <div class="mhd"><div class="mic mic-cy">⬇</div><div><div class="mtl">Recover Files</div><div class="msb" id="recSub">0 selected</div></div><button class="mcl" onclick="cm('recModal')">✕</button></div>
+    <div class="mbd">
+      <div style="font-size:12px;color:var(--t2);margin-bottom:8px">Save recovered files to this folder:</div>
+      <input class="m-inp" id="recPath" value="C:\MyRecoveredFiles">
+      <label class="m-opt"><input type="checkbox" checked id="rr">🔧 Auto-repair corrupted files (JPEG, BMP, PNG)</label>
+      <label class="m-opt"><input type="checkbox" checked id="rd">🔄 Skip duplicate files</label>
+    </div>
+    <div class="mft"><button class="btn b-ghost" onclick="cm('recModal')">Cancel</button><button class="btn b-grn" onclick="doRecover()">⬇ Start Recovery</button></div>
+  </div>
+</div>
+
+<!-- PROGRESS MODAL -->
+<div class="ovl" id="progModal">
+  <div class="modal">
+    <div class="mhd"><div class="mic mic-cy">⚡</div><div><div class="mtl">Recovery In Progress</div><div class="msb" id="progSub">Saving files...</div></div></div>
+    <div class="mbd" style="text-align:center">
+      <div class="rw"><svg viewBox="0 0 70 70"><circle class="rbg" cx="35" cy="35" r="30"/><circle class="rfl" id="ringFl" cx="35" cy="35" r="30"/></svg><div class="rp" id="ringPct">0%</div></div>
+      <div style="font-family:var(--fm);font-size:11px;color:var(--t2);margin-bottom:10px"><span id="recDone">0</span> / <span id="recTotal">0</span> files</div>
+      <div class="ph-list">
+        <div class="ph-row"><div class="pd" id="pd1"></div>Reading source files</div>
+        <div class="ph-row"><div class="pd" id="pd2"></div>Repairing corrupted files</div>
+        <div class="ph-row"><div class="pd" id="pd3"></div>Writing to output folder</div>
+        <div class="ph-row"><div class="pd" id="pd4"></div>Finalizing</div>
+      </div>
+      <div id="repCount" style="margin-top:10px;font-size:11px;color:var(--grn);display:none"></div>
+      <div id="curFile" style="margin-top:6px;font-size:10px;color:var(--t3);font-family:var(--fm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:380px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- DONE MODAL -->
+<div class="ovl" id="doneModal">
+  <div class="modal">
+    <div class="mhd"><div class="mic mic-grn">✓</div><div><div class="mtl">Recovery Complete! 🎉</div><div class="msb">Files saved successfully</div></div><button class="mcl" onclick="cm('doneModal')">✕</button></div>
+    <div class="mbd" style="text-align:center">
+      <div style="font-family:var(--fm);font-size:40px;font-weight:700;color:var(--grn);margin-bottom:4px" id="doneN">0</div>
+      <div style="color:var(--t2);font-size:13px;margin-bottom:4px">files recovered</div>
+      <div id="doneRep" style="font-size:11px;color:var(--grn);margin-bottom:14px"></div>
+      <div style="background:var(--bg3);border-radius:var(--r);padding:9px;font-family:var(--fm);font-size:11px;color:var(--cy);text-align:left">📁 <span id="donePath">C:\MyRecoveredFiles</span></div>
+      <button class="btn b-pur" style="width:100%;justify-content:center;margin-top:12px" onclick="aiAfter()">✦ AI Analyze Results</button>
+    </div>
+    <div class="mft" style="justify-content:center"><button class="btn b-ghost" onclick="cm('doneModal')">Close</button><button class="btn b-cy" onclick="cm('doneModal')">📂 View Files</button></div>
+  </div>
+</div>
+
+<!-- BUILD MODAL -->
+<div class="ovl" id="buildModal">
+  <div class="modal">
+    <div class="mhd"><div class="mic mic-amb">🔨</div><div><div class="mtl">Building Engine</div><div class="msb" id="buildSub">Compiling C++17...</div></div></div>
+    <div class="mbd">
+      <div class="pbg" style="margin-bottom:8px"><div class="pfl" id="buildPb" style="transition:width .5s"></div></div>
+      <div class="build-log" id="buildLog"></div>
+    </div>
+  </div>
+</div>
+
+<div class="tbox" id="tbox"></div>
+</body>
+</html>
