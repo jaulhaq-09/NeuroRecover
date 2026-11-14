@@ -24,6 +24,24 @@ Supports 50+ file formats including photos, videos, documents, and archives.
 
 ## Quick Start
 
+### Windows (PowerShell as Administrator)
+
+```powershell
+# 1. Build the engine
+.\build.ps1
+
+# 2. Check your USB drive ID (e.g. \\.\PHYSICALDRIVE1)
+Get-CimInstance Win32_DiskDrive | Select-Object DeviceID, Caption, @{N='SizeGB';E={[math]::Round($_.Size/1GB,2)}}
+
+# 3. Recover everything from drive (replace PhysicalDrive1 with your drive)
+.\build\neurorecover.exe //./PhysicalDrive1 .\recovered -t all -d -f -r
+
+# Or launch the interactive Web UI:
+.\run.ps1
+```
+
+### Linux / macOS
+
 ```bash
 # 1. Build
 cd NeuroRecover
@@ -89,6 +107,27 @@ neurorecover [options] <device> <output_dir>
 ---
 
 ## Examples
+
+### Windows (PowerShell)
+
+```powershell
+# Recover all files from USB drive (PhysicalDrive1)
+.\build\neurorecover.exe //./PhysicalDrive1 .\recovered -t all -d -f -r
+
+# Recover only photos from SD card / USB with EXIF extraction
+.\build\neurorecover.exe //./PhysicalDrive1 .\photos -t jpg,png,tiff,raw -f -a
+
+# Recover videos with 8 threads
+.\build\neurorecover.exe //./PhysicalDrive1 .\videos -t mp4,mov,avi,mkv -j 8 -d -f
+
+# Recover from a disk image file (.img, .raw, .dd)
+.\build\neurorecover.exe disk.img .\recovered -t all -d -f -r
+
+# Generate visual HTML gallery
+.\build\neurorecover.exe //./PhysicalDrive1 .\recovered -t all -d -p
+```
+
+### Linux / macOS
 
 ```bash
 # Recover all files from USB drive
