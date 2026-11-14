@@ -295,3 +295,26 @@ body{font-family:var(--ff);background:var(--bg0);color:var(--t1);min-height:100v
 .sn2{width:36px;height:36px;background:var(--bg2);border:1px solid var(--brd);border-radius:var(--rl);display:flex;align-items:center;justify-content:center;font-family:var(--fm);font-size:14px;font-weight:700;color:var(--cy);}
 .sh2{font-weight:600;font-size:13px;margin-bottom:4px;}
 .sp2{font-size:12px;color:var(--t2);line-height:1.7;}
+
+/* AUTH & USER BAR */
+.auth-bar{display:flex;align-items:center;gap:6px;}
+.user-pill{display:inline-flex;align-items:center;gap:7px;padding:4px 10px;background:var(--bg3);border:1px solid var(--brd);border-radius:20px;font-size:11px;font-weight:600;color:var(--t1);}
+.user-avatar{width:22px;height:22px;background:linear-gradient(135deg,var(--cy),var(--pur));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--bg0);}
+.auth-tabs{display:flex;border-bottom:1px solid var(--brd);margin-bottom:16px;}
+.auth-tab{flex:1;text-align:center;padding:10px;font-size:13px;font-weight:600;color:var(--t2);cursor:pointer;border-bottom:2px solid transparent;}
+.auth-tab.on{color:var(--cy);border-bottom-color:var(--cy);}
+.auth-err{background:rgba(241,76,76,.1);border:1px solid rgba(241,76,76,.3);color:var(--red);padding:8px 12px;border-radius:var(--r);font-size:11px;margin-bottom:12px;display:none;}
+.form-grp{margin-bottom:12px;}
+.form-grp label{display:block;font-size:11px;color:var(--t2);margin-bottom:4px;font-weight:500;}
+
+/* HISTORY VIEW */
+.hist-wrap{padding:28px 36px;max-width:1200px;margin:0 auto;width:100%;}
+.hist-table{width:100%;border-collapse:collapse;margin-top:16px;background:var(--bg2);border:1px solid var(--brd);border-radius:var(--rl);overflow:hidden;}
+.hist-table th{background:var(--bg3);padding:10px 14px;font-size:11px;font-weight:600;color:var(--t2);text-align:left;border-bottom:1px solid var(--brd);font-family:var(--fm);letter-spacing:.05em;}
+.hist-table td{padding:12px 14px;font-size:12px;color:var(--t1);border-bottom:1px solid rgba(48,54,61,.5);}
+.hist-table tr:hover td{background:rgba(255,255,255,.02);}
+.badge-status{font-size:10px;font-family:var(--fm);padding:2px 7px;border-radius:12px;}
+.st-comp{background:rgba(35,209,139,.1);color:var(--grn);border:1px solid rgba(35,209,139,.3);}
+.st-run{background:rgba(0,217,245,.1);color:var(--cy);border:1px solid rgba(0,217,245,.3);}
+.st-stop{background:rgba(229,160,13,.1);color:var(--amb);border:1px solid rgba(229,160,13,.3);}
+.st-err{background:rgba(241,76,76,.1);color:var(--red);border:1px solid rgba(241,76,76,.3);}

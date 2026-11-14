@@ -17,8 +17,12 @@
   <div class="nsp"></div>
   <button class="nbtn on" id="n-home"    onclick="gp('home')">Home</button>
   <button class="nbtn"    id="n-recover" onclick="gp('recover')">Recovery</button>
+  <button class="nbtn"    id="n-history" onclick="gp('history')">📜 History</button>
   <button class="nbtn"    id="n-how"     onclick="gp('how')">How It Works</button>
   <button class="ai-tog"  onclick="toggleAI()">✦ AI Assistant</button>
+  <div id="authNavWrap" class="auth-bar">
+    <button class="btn b-sec b-sm" onclick="openAuthModal('login')">🔑 Log In</button>
+  </div>
 </nav>
 
 <div class="adm" id="admBan">
@@ -254,6 +258,51 @@
   </div>
 </div>
 
+<!-- HISTORY & DATABASE -->
+<div id="pg-history" class="pg" style="flex-direction:column">
+  <div class="hist-wrap">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+      <div>
+        <h1 style="font-size:24px;font-weight:700;margin-bottom:4px">Recovery History & Database</h1>
+        <p style="color:var(--t2);font-size:13px">Persistent audit log of all previous scans and carved file catalogs stored in SQLite.</p>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn b-sec b-sm" onclick="loadHistory()">🔄 Refresh</button>
+        <button class="btn b-cy b-sm" onclick="gp('recover')">🔍 New Recovery</button>
+      </div>
+    </div>
+
+    <!-- History Stats -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px">
+      <div class="card" style="margin:0"><div class="clbl">Total Scans Saved</div><div style="font-size:22px;font-weight:700;color:var(--cy);font-family:var(--fm)" id="histTotalScans">0</div></div>
+      <div class="card" style="margin:0"><div class="clbl">Total Files Indexed</div><div style="font-size:22px;font-weight:700;color:var(--grn);font-family:var(--fm)" id="histTotalFiles">0</div></div>
+      <div class="card" style="margin:0"><div class="clbl">Database Storage</div><div style="font-size:22px;font-weight:700;color:var(--pur);font-family:var(--fm)">SQLite DB</div></div>
+    </div>
+
+    <!-- Scans Table Container -->
+    <div id="histContent">
+      <div class="empty" id="histEmpty" style="background:var(--bg2);border:1px solid var(--brd);border-radius:var(--rl)">
+        <div style="font-size:36px;margin-bottom:12px;opacity:.5">📜</div>
+        <div style="font-weight:600;font-size:15px;margin-bottom:4px">No Scan Sessions Found Yet</div>
+        <div style="font-size:12px;color:var(--t2);max-width:360px">Run your first recovery scan to automatically index and preserve session details and carved files here.</div>
+      </div>
+      <table class="hist-table" id="histTable" style="display:none">
+        <thead>
+          <tr>
+            <th>Status</th>
+            <th>Target Device</th>
+            <th>Date & Time</th>
+            <th>Files Found</th>
+            <th>Output Folder</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="histTbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 <!-- HOW IT WORKS -->
 <div id="pg-how" class="pg" style="flex-direction:column"><div class="how-wrap">
   <h1 style="font-size:26px;font-weight:700;margin-bottom:8px">How NeuroRecover AI Works</h1>
@@ -371,6 +420,82 @@ What would you like help with?</div>
     <div class="mbd">
       <div class="pbg" style="margin-bottom:8px"><div class="pfl" id="buildPb" style="transition:width .5s"></div></div>
       <div class="build-log" id="buildLog"></div>
+    </div>
+  </div>
+</div>
+
+<!-- AUTH MODAL (LOGIN / SIGN UP) -->
+<div class="ovl" id="authModal">
+  <div class="modal" style="max-width:420px">
+    <div class="mhd">
+      <div class="mic mic-cy">🔐</div>
+      <div>
+        <div class="mtl" id="authModalTitle">Welcome to NeuroRecover</div>
+        <div class="msb" id="authModalSub">Access your recovery history and saved scans</div>
+      </div>
+      <button class="mcl" onclick="cm('authModal')">✕</button>
+    </div>
+    <div class="mbd">
+      <div class="auth-tabs">
+        <div class="auth-tab on" id="tabLogin" onclick="switchAuthTab('login')">Log In</div>
+        <div class="auth-tab" id="tabSignup" onclick="switchAuthTab('signup')">Sign Up</div>
+      </div>
+
+      <div class="auth-err" id="authErr"></div>
+
+      <!-- Login Form -->
+      <form id="formLogin" onsubmit="event.preventDefault();submitLogin()">
+        <div class="form-grp">
+          <label>Username or Email</label>
+          <input class="cinp" id="loginId" type="text" placeholder="Enter username or email" required autocomplete="username">
+        </div>
+        <div class="form-grp">
+          <label>Password</label>
+          <input class="cinp" id="loginPw" type="password" placeholder="Enter password" required autocomplete="current-password">
+        </div>
+        <button class="btn b-cy" type="submit" style="width:100%;justify-content:center;margin-top:14px" id="btnLoginSub">🔑 Log In</button>
+      </form>
+
+      <!-- Signup Form -->
+      <form id="formSignup" style="display:none" onsubmit="event.preventDefault();submitSignup()">
+        <div class="form-grp">
+          <label>Username</label>
+          <input class="cinp" id="regUser" type="text" placeholder="Choose a username (min 3 chars)" required autocomplete="username">
+        </div>
+        <div class="form-grp">
+          <label>Email Address</label>
+          <input class="cinp" id="regEmail" type="email" placeholder="name@example.com" required autocomplete="email">
+        </div>
+        <div class="form-grp">
+          <label>Password</label>
+          <input class="cinp" id="regPw" type="password" placeholder="At least 6 characters" required autocomplete="new-password">
+        </div>
+        <button class="btn b-grn" type="submit" style="width:100%;justify-content:center;margin-top:14px" id="btnSignupSub">✨ Create Account</button>
+      </form>
+
+      <div style="text-align:center;margin-top:16px;font-size:11px;color:var(--t2)">
+        <a href="javascript:void(0)" onclick="cm('authModal')" style="color:var(--t2);text-decoration:underline">Continue as Guest (Emergency Mode)</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCAN DETAILS MODAL -->
+<div class="ovl" id="scanModal">
+  <div class="modal" style="max-width:700px">
+    <div class="mhd">
+      <div class="mic mic-cy">📁</div>
+      <div>
+        <div class="mtl" id="smTitle">Scan Details</div>
+        <div class="msb" id="smSub">Files indexed in SQLite database</div>
+      </div>
+      <button class="mcl" onclick="cm('scanModal')">✕</button>
+    </div>
+    <div class="mbd" style="max-height:450px;overflow-y:auto">
+      <div id="smFileList"></div>
+    </div>
+    <div class="mft">
+      <button class="btn b-ghost" onclick="cm('scanModal')">Close</button>
     </div>
   </div>
 </div>

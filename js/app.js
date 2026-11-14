@@ -1,9 +1,17 @@
 // ═══════════════════════════════════════════════════════
-// CONFIG
+// CONFIG & AUTH STATE
 // ═══════════════════════════════════════════════════════
 const SRV = (location.hostname==='localhost'||location.hostname==='127.0.0.1')
           ? `${location.protocol}//${location.host}` : null;
 let serverOn=false, exeReady=false, isAdmin=false, aiOpen=false;
+let currentUser = null;
+let authToken = localStorage.getItem('nr_token') || null;
+
+function getAuthHeaders() {
+  const h = { 'Content-Type': 'application/json' };
+  if (authToken) h['Authorization'] = 'Bearer ' + authToken;
+  return h;
+}
 
 // ═══════════════════════════════════════════════════════
 // INIT
@@ -13,7 +21,7 @@ async function init(){
   document.getElementById('drv').innerHTML =
     '<option value="//./PhysicalDrive0">💾 PhysicalDrive0 (System)</option>'+
     '<option value="//./PhysicalDrive1" selected>🔌 PhysicalDrive1 (USB) ← recommended</option>';
-  if(!SRV){setMode('demo');return;}
+  if(!SRV){setMode('demo');renderAuthBar();return;}
   try{
     const r=await fetch(SRV+'/api/status',{signal:AbortSignal.timeout(3000)});
     if(!r.ok)throw 0;
@@ -24,7 +32,8 @@ async function init(){
     }
     setMode(!isAdmin?'no-admin':!exeReady?'build':'live');
     loadDrives();
-  }catch{serverOn=false;setMode('demo');toast('info','💡','Run "node server.js" as Administrator for real recovery');}
+    checkAuth();
+  }catch{serverOn=false;setMode('demo');toast('info','💡','Run "node server.js" as Administrator for real recovery');renderAuthBar();}
 }
 
 function setMode(m){
@@ -210,7 +219,9 @@ function realScan(device,outputDir){
   };
   ST.quickTypes=null;
   const xhr=new XMLHttpRequest();xhr.open('POST',SRV+'/api/scan',true);
-  xhr.setRequestHeader('Content-Type','application/json');xhr.timeout=0;ST.xhr=xhr;
+  xhr.setRequestHeader('Content-Type','application/json');
+  if(authToken) xhr.setRequestHeader('Authorization','Bearer '+authToken);
+  xhr.timeout=0;ST.xhr=xhr;
   let pos=0,buf='';
   xhr.onprogress=()=>{
     const nd=xhr.responseText.slice(pos);pos=xhr.responseText.length;buf+=nd;
@@ -684,7 +695,236 @@ function aiAfter(){cm('doneModal');if(!aiOpen)toggleAI();aiAnalyze(false);}
 // ═══════════════════════════════════════════════════════
 // NAV & UTILS
 // ═══════════════════════════════════════════════════════
-function gp(name){document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('on'));document.getElementById('pg-'+name).classList.add('on');document.getElementById('n-'+name).classList.add('on');}
+// ═══════════════════════════════════════════════════════
+// NAV & UTILS
+// ═══════════════════════════════════════════════════════
+function gp(name){
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('on'));
+  const pg=document.getElementById('pg-'+name);if(pg)pg.classList.add('on');
+  const nb=document.getElementById('n-'+name);if(nb)nb.classList.add('on');
+  if(name==='history')loadHistory();
+}
+
+// ═══════════════════════════════════════════════════════
+// AUTHENTICATION & DATABASE HISTORY
+// ═══════════════════════════════════════════════════════
+async function checkAuth(){
+  if(!authToken){renderAuthBar();return;}
+  try{
+    const res=await fetch(SRV+'/api/auth/me',{headers:getAuthHeaders()});
+    if(res.ok){
+      const data=await res.json();
+      if(data.user){currentUser=data.user;}
+      else{currentUser=null;authToken=null;localStorage.removeItem('nr_token');}
+    }
+  }catch(_){}
+  renderAuthBar();
+}
+
+function renderAuthBar(){
+  const wrap=document.getElementById('authNavWrap');
+  if(!wrap)return;
+  if(currentUser){
+    wrap.innerHTML=`
+      <div class="user-pill" title="${currentUser.email}">
+        <div class="user-avatar">${currentUser.username.slice(0,1).toUpperCase()}</div>
+        <span>${currentUser.username}</span>
+      </div>
+      <button class="btn b-ghost b-sm" onclick="logoutUser()" title="Log Out">Log Out</button>
+    `;
+  }else{
+    wrap.innerHTML=`
+      <button class="btn b-sec b-sm" onclick="openAuthModal('login')">🔑 Log In</button>
+    `;
+  }
+}
+
+function openAuthModal(mode='login'){
+  switchAuthTab(mode);
+  const errBox=document.getElementById('authErr');
+  if(errBox)errBox.style.display='none';
+  om('authModal');
+}
+
+function switchAuthTab(tab){
+  const tL=document.getElementById('tabLogin');
+  const tS=document.getElementById('tabSignup');
+  const fL=document.getElementById('formLogin');
+  const fS=document.getElementById('formSignup');
+  const err=document.getElementById('authErr');
+  if(err)err.style.display='none';
+  if(tab==='login'){
+    tL.classList.add('on');tS.classList.remove('on');
+    fL.style.display='block';fS.style.display='none';
+  }else{
+    tS.classList.add('on');tL.classList.remove('on');
+    fS.style.display='block';fL.style.display='none';
+  }
+}
+
+async function submitLogin(){
+  const identifier=document.getElementById('loginId').value.trim();
+  const password=document.getElementById('loginPw').value;
+  const errBox=document.getElementById('authErr');
+  const btn=document.getElementById('btnLoginSub');
+  btn.disabled=true;
+  try{
+    const res=await fetch(SRV+'/api/auth/login',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({identifier,password})
+    });
+    const data=await res.json();
+    if(!res.ok||!data.success)throw new Error(data.error||'Login failed');
+    currentUser=data.user;
+    authToken=data.token;
+    localStorage.setItem('nr_token',authToken);
+    renderAuthBar();
+    cm('authModal');
+    toast('ok','👋',`Welcome back, ${currentUser.username}!`);
+  }catch(e){
+    errBox.textContent=e.message;
+    errBox.style.display='block';
+  }finally{
+    btn.disabled=false;
+  }
+}
+
+async function submitSignup(){
+  const username=document.getElementById('regUser').value.trim();
+  const email=document.getElementById('regEmail').value.trim();
+  const password=document.getElementById('regPw').value;
+  const errBox=document.getElementById('authErr');
+  const btn=document.getElementById('btnSignupSub');
+  btn.disabled=true;
+  try{
+    const res=await fetch(SRV+'/api/auth/signup',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({username,email,password})
+    });
+    const data=await res.json();
+    if(!res.ok||!data.success)throw new Error(data.error||'Registration failed');
+    currentUser=data.user;
+    authToken=data.token;
+    localStorage.setItem('nr_token',authToken);
+    renderAuthBar();
+    cm('authModal');
+    toast('ok','🎉',`Account created! Welcome, ${currentUser.username}`);
+  }catch(e){
+    errBox.textContent=e.message;
+    errBox.style.display='block';
+  }finally{
+    btn.disabled=false;
+  }
+}
+
+async function logoutUser(){
+  if(authToken){
+    try{
+      await fetch(SRV+'/api/auth/logout',{
+        method:'POST',
+        headers:getAuthHeaders()
+      });
+    }catch(_){}
+  }
+  currentUser=null;
+  authToken=null;
+  localStorage.removeItem('nr_token');
+  renderAuthBar();
+  toast('info','🔒','Logged out successfully');
+}
+
+async function loadHistory(){
+  if(!serverOn)return;
+  const tbody=document.getElementById('histTbody');
+  const table=document.getElementById('histTable');
+  const empty=document.getElementById('histEmpty');
+  const scCount=document.getElementById('histTotalScans');
+  const flCount=document.getElementById('histTotalFiles');
+  try{
+    const res=await fetch(SRV+'/api/history/scans',{headers:getAuthHeaders()});
+    const data=await res.json();
+    if(!data.success||!data.scans||!data.scans.length){
+      table.style.display='none';
+      empty.style.display='flex';
+      if(scCount)scCount.textContent='0';
+      if(flCount)flCount.textContent='0';
+      return;
+    }
+    empty.style.display='none';
+    table.style.display='table';
+    let totalFiles=0;
+    data.scans.forEach(s=>totalFiles+=(s.total_files||0));
+    if(scCount)scCount.textContent=data.scans.length;
+    if(flCount)flCount.textContent=totalFiles.toLocaleString();
+
+    tbody.innerHTML=data.scans.map(s=>{
+      const stClass=s.status==='completed'?'st-comp':(s.status==='running'?'st-run':'st-stop');
+      const dateStr=s.started_at?new Date(s.started_at).toLocaleString():'—';
+      return `
+        <tr>
+          <td><span class="badge-status ${stClass}">${(s.status||'DONE').toUpperCase()}</span></td>
+          <td><strong>${s.device_path}</strong></td>
+          <td style="color:var(--t2);font-family:var(--fm);font-size:11px">${dateStr}</td>
+          <td><strong style="color:var(--cy)">${s.total_files||0}</strong> files</td>
+          <td style="color:var(--t2);font-family:var(--fm);font-size:11px">${s.output_dir}</td>
+          <td>
+            <div style="display:flex;gap:6px">
+              <button class="btn b-sec b-sm" onclick="viewScanDetails('${s.id}')">👁 Files</button>
+              <button class="btn b-ghost b-sm" onclick="deleteScan('${s.id}')" title="Delete record">🗑</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }catch(e){
+    console.error('Failed to load history:',e);
+  }
+}
+
+async function viewScanDetails(scanId){
+  try{
+    const res=await fetch(SRV+`/api/history/scans/${scanId}`,{headers:getAuthHeaders()});
+    const data=await res.json();
+    if(!data.success||!data.scan)return;
+    document.getElementById('smTitle').textContent=`Scan: ${data.scan.device_path}`;
+    document.getElementById('smSub').textContent=`Started: ${new Date(data.scan.started_at).toLocaleString()} · ${data.files.length} files saved in DB`;
+    const list=document.getElementById('smFileList');
+    if(!data.files.length){
+      list.innerHTML='<div style="padding:20px;text-align:center;color:var(--t2)">No individual file records recorded for this session.</div>';
+    }else{
+      list.innerHTML=`
+        <div style="font-size:12px;margin-bottom:8px;color:var(--t2)">Files carved during this session:</div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          ${data.files.map(f=>`
+            <div style="display:flex;align-items:center;gap:10px;padding:6px 10px;background:var(--bg3);border-radius:var(--r);font-size:12px">
+              <span style="font-size:14px">${gi(f.extension)}</span>
+              <span style="flex:1;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${f.file_path}">${f.file_name}</span>
+              <span style="font-family:var(--fm);color:var(--t2);font-size:10px">${fz(f.size_bytes)}</span>
+              ${f.is_repaired?'<span class="tag tag-fix" style="font-size:9px">FIXED</span>':''}
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+    om('scanModal');
+  }catch(e){
+    toast('err','❌','Could not load scan details');
+  }
+}
+
+async function deleteScan(scanId){
+  if(!confirm('Are you sure you want to remove this scan session from the database? (Files on disk will remain untouched)'))return;
+  try{
+    await fetch(SRV+`/api/history/scans/${scanId}`,{
+      method:'DELETE',
+      headers:getAuthHeaders()
+    });
+    toast('info','🗑','Scan record deleted');
+    loadHistory();
+  }catch(_){}
+}
+
 function sh(id,v){
   const e=document.getElementById(id);if(!e)return;
   if(!v){e.style.display='none';return;}
@@ -701,7 +941,7 @@ function toast(type,icon,text){
   setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(110%)';t.style.transition='all .28s';setTimeout(()=>t.remove(),280);},5000);
 }
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){['recModal','progModal','doneModal','buildModal'].forEach(cm);closePrev();if(aiOpen){aiOpen=false;document.getElementById('aiPanel').classList.remove('open');}}
+  if(e.key==='Escape'){['recModal','progModal','doneModal','buildModal','authModal','scanModal'].forEach(cm);closePrev();if(aiOpen){aiOpen=false;document.getElementById('aiPanel').classList.remove('open');}}
   if(e.key==='ArrowLeft'&&document.getElementById('prevOvl').classList.contains('open'))prevFile();
   if(e.key==='ArrowRight'&&document.getElementById('prevOvl').classList.contains('open'))nextFile();
   if((e.ctrlKey||e.metaKey)&&e.key==='a'&&ST.filtered.length){e.preventDefault();selAll(true);}

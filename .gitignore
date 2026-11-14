@@ -32,6 +32,10 @@ out/
 test_output/
 *.meta.json
 *.records.json
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
 
 # IDE & OS files
 .vscode/

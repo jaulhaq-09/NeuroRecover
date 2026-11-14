@@ -22,6 +22,7 @@ const { spawn, execSync, spawnSync } = require('child_process');
 const path     = require('path');
 const fs       = require('fs');
 const crypto   = require('crypto');
+const db       = require('./db');
 
 const app  = express();
 const PORT = 3000;
@@ -106,8 +107,11 @@ app.use(express.json({limit:'50mb'}));
 app.use((req,res,next)=>{
   res.setHeader('Access-Control-Allow-Origin','*');
   res.setHeader('Access-Control-Allow-Methods','GET,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers','Content-Type');
+  res.setHeader('Access-Control-Allow-Headers','Content-Type,Authorization');
   if(req.method==='OPTIONS')return res.sendStatus(200);
+  const auth = req.headers['authorization'];
+  const token = auth && auth.startsWith('Bearer ') ? auth.slice(7) : (req.query.token || null);
+  req.user = db.getUserByToken(token);
   next();
 });
 app.get('/',(req,res)=>{
@@ -372,6 +376,17 @@ app.post('/api/scan',(req,res)=>{
   scans[id]=proc;
   send({type:'pid',scanId:id});
 
+  const currentUser = req.user || null;
+  try {
+    db.recordScanStart({
+      id,
+      userId: currentUser ? currentUser.id : null,
+      devicePath: device,
+      outputDir: rawOut,
+      options: { types: typesStr, deep: !!deep, repair: true, metadata: !!metadata, preview: !!preview }
+    });
+  } catch(_) {}
+
   // If the client disconnects for ANY reason (browser closed, network
   // reset, server restarted via --watch mid-scan), kill the child process.
   // Without this, neurorecover.exe becomes orphaned and keeps scanning the
@@ -387,6 +402,14 @@ app.post('/api/scan',(req,res)=>{
       try{scans[id].kill('SIGTERM');}catch(_){}
       delete scans[id];
       allowSleep();
+      try {
+        db.recordScanEnd(id, {
+          status: 'stopped',
+          totalFiles: total,
+          filesRepaired: 0,
+          bytesScanned: 0
+        });
+      } catch(_) {}
     }
   });
 
@@ -413,8 +436,21 @@ app.post('/api/scan',(req,res)=>{
         const fname=fp.split(/[/\\]/).pop();
         const ext=path.extname(fp).slice(1).toLowerCase();
         const cat=getCategory(ext);
+        const szBytes=(parseInt(cm[2])||0)*1024;
         byType[ext]=(byType[ext]||0)+1;
         byCategory[cat]=(byCategory[cat]||0)+1;
+        try {
+          db.recordRecoveredFile({
+            scanId: id,
+            userId: currentUser ? currentUser.id : null,
+            fileName: fname,
+            filePath: fp,
+            extension: ext,
+            category: cat,
+            sizeBytes: szBytes,
+            isRepaired: true
+          });
+        } catch(_) {}
         const isImg=['jpg','jpeg','png','gif','bmp','webp','heic'].includes(ext);
         send({type:'file',path:fp,name:fname,ext,category:cat,total,byType,byCategory,
           sizeKB:parseInt(cm[2]),
@@ -453,6 +489,14 @@ app.post('/api/scan',(req,res)=>{
   proc.on('close',(code,signal)=>{
     clearInterval(ka);delete scans[id];allowSleep();
     console.log(`✅ Scan done. EXE code: ${code} signal: ${signal} files: ${total}`);
+    try {
+      db.recordScanEnd(id, {
+        status: code === 0 ? 'completed' : 'interrupted',
+        totalFiles: total,
+        filesRepaired: 0,
+        bytesScanned: 0
+      });
+    } catch(_) {}
     // Count files actually on disk
     let diskFiles=0;
     try{
@@ -474,7 +518,11 @@ app.post('/api/scan',(req,res)=>{
 // ── POST /api/stop ────────────────────────────────────────────────────────────
 app.post('/api/stop',(req,res)=>{
   const{scanId}=req.body||{};
-  if(scanId&&scans[scanId]){scans[scanId].kill('SIGTERM');delete scans[scanId];}
+  if(scanId&&scans[scanId]){
+    scans[scanId].kill('SIGTERM');
+    delete scans[scanId];
+    try { db.recordScanEnd(scanId, { status: 'stopped' }); } catch(_) {}
+  }
   allowSleep();res.json({stopped:true});
 });
 
@@ -708,6 +756,56 @@ app.post('/api/ai/chat',(req,res)=>{
 app.post('/api/ai/suggest',(req,res)=>{
   const{device,driveType,goal}=req.body||{};
   res.json({success:true,...localAISuggest(device,driveType,goal)});
+});
+
+// ── Auth Endpoints ────────────────────────────────────────────────────────────
+app.post('/api/auth/signup', (req, res) => {
+  const { username, email, password } = req.body || {};
+  try {
+    const result = db.registerUser(username, email, password);
+    res.json({ success: true, user: result.user, token: result.token });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/auth/login', (req, res) => {
+  const { identifier, password } = req.body || {};
+  try {
+    const result = db.loginUser(identifier, password);
+    res.json({ success: true, user: result.user, token: result.token });
+  } catch (err) {
+    res.status(401).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/auth/me', (req, res) => {
+  res.json({ success: true, user: req.user || null });
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  const auth = req.headers['authorization'];
+  const token = auth && auth.startsWith('Bearer ') ? auth.slice(7) : (req.query.token || null);
+  if (token) db.revokeSession(token);
+  res.json({ success: true });
+});
+
+// ── Scan History & Database Query Endpoints ───────────────────────────────────
+app.get('/api/history/scans', (req, res) => {
+  const userId = req.user ? req.user.id : null;
+  const scans = db.getScanHistory(userId);
+  res.json({ success: true, scans });
+});
+
+app.get('/api/history/scans/:id', (req, res) => {
+  const details = db.getScanDetails(req.params.id);
+  if (!details) return res.status(404).json({ success: false, error: 'Scan not found' });
+  res.json({ success: true, ...details });
+});
+
+app.delete('/api/history/scans/:id', (req, res) => {
+  db.deleteScanRecord(req.params.id);
+  res.json({ success: true });
 });
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
