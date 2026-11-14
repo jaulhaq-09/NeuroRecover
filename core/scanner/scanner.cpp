@@ -37,6 +37,12 @@ bool Scanner::open() {
         GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
         nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_NO_BUFFERING, nullptr);
     if (h == INVALID_HANDLE_VALUE) {
+        // Fallback: try opening without FILE_FLAG_NO_BUFFERING (e.g. for image files or filesystems not supporting unbuffered I/O)
+        h = CreateFileA(config_.devicePath.c_str(),
+            GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
+            nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    }
+    if (h == INVALID_HANDLE_VALUE) {
         DWORD err = GetLastError();
         LOG_ERROR("Cannot open device: " + config_.devicePath +
                    " (Win32 error code=" + std::to_string(err) + ")");

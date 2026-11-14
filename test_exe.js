@@ -57,8 +57,9 @@ test1.on('error', e => {
 });
 
 function testDisk() {
+  const testDir = path.join(__dirname, 'test_output');
   console.log('\n--- Testing: scan //./PhysicalDrive1 (5 second timeout) ---');
-  const test2 = spawn(EXE, ['//./PhysicalDrive1','C:\\test_output','-t','jpg','-j','1'], 
+  const test2 = spawn(EXE, ['//./PhysicalDrive1', testDir, '-t', 'jpg', '-j', '1'], 
     { stdio:['ignore','pipe','pipe'], windowsHide:true });
   let out2 = '';
   const timer = setTimeout(() => {
@@ -73,5 +74,6 @@ function testDisk() {
     console.log('Output received:', out2.length, 'bytes');
     if (out2.length > 0) console.log('Output:', out2.slice(0,500));
     else console.log('❌ NO OUTPUT from disk scan either!');
+    try { if (fs.existsSync(testDir)) fs.rmSync(testDir, { recursive: true, force: true }); } catch(_) {}
   });
 }

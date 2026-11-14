@@ -19,6 +19,9 @@ async function init(){
     if(!r.ok)throw 0;
     const s=await r.json();
     serverOn=true;exeReady=s.exeFound;isAdmin=s.isAdmin;
+    if(s.defaultOutputDir && (!document.getElementById('outd').value || document.getElementById('outd').value==='C:\\recovered')){
+      document.getElementById('outd').value=s.defaultOutputDir;
+    }
     setMode(!isAdmin?'no-admin':!exeReady?'build':'live');
     loadDrives();
   }catch{serverOn=false;setMode('demo');toast('info','💡','Run "node server.js" as Administrator for real recovery');}
@@ -56,7 +59,11 @@ function setMode(m){
 async function loadDrives(){
   if(!serverOn)return;
   try{
-    const{drives}=await(await fetch(SRV+'/api/drives')).json();
+    const data=await(await fetch(SRV+'/api/drives')).json();
+    const drives=data.drives;
+    if(data.defaultOutputDir && (!document.getElementById('outd').value || document.getElementById('outd').value==='C:\\recovered')){
+      document.getElementById('outd').value=data.defaultOutputDir;
+    }
     if(drives?.length){
       ST.driveSizes={};
       drives.forEach(d=>{ST.driveSizes[d.deviceId]=d.size||0;});
@@ -66,6 +73,32 @@ async function loadDrives(){
       ).join('');
     }
   }catch{}
+}
+
+function toggleCustomPath(){
+  const wrap=document.getElementById('customPathWrap');
+  const btn=document.getElementById('btnTogCustom');
+  if(!wrap)return;
+  if(wrap.style.display==='none'){
+    wrap.style.display='block';
+    if(btn)btn.textContent='💾 Presets';
+    const inp=document.getElementById('customDrv');
+    if(inp)inp.focus();
+  }else{
+    wrap.style.display='none';
+    if(btn)btn.textContent='✏️ Custom';
+    const inp=document.getElementById('customDrv');
+    if(inp)inp.value='';
+  }
+}
+
+function onDriveSelect(){
+  const wrap=document.getElementById('customPathWrap');
+  if(wrap)wrap.style.display='none';
+  const btn=document.getElementById('btnTogCustom');
+  if(btn)btn.textContent='✏️ Custom';
+  const inp=document.getElementById('customDrv');
+  if(inp)inp.value='';
 }
 
 // ═══════════════════════════════════════════════════════
@@ -136,11 +169,17 @@ const PHOTO_VIDEO_TYPES='jpg,jpeg,png,bmp,gif,heic,tiff,webp,cr2,nef,arw,dng,orf
 function doScan(){
   if(ST.scanning)return;
   if(!ST.quickTypes)ST.quickTypes=PHOTO_VIDEO_TYPES; // scope to photos+videos only by default
-  if(serverOn&&!isAdmin){showError('Administrator Required','❌ Not running as Administrator!\n\nFIX:\n1. Press Ctrl+C to stop server\n2. Open PowerShell as Administrator\n3. cd "C:\\Users\\mrove\\OneDrive\\Desktop\\NeuroRecover"\n4. node server.js\n5. Refresh browser');sh('st-idle',0);sh('st-error',1);return;}
+  const custom=document.getElementById('customDrv')?document.getElementById('customDrv').value.trim():'';
+  const dev=custom||document.getElementById('drv').value||'//./PhysicalDrive1';
+  const isPhysical=/^((\/\/|\x5c\x5c)\.[\/\\]|physicaldrive|[a-z]:$)/i.test(dev.trim());
+
+  if(serverOn&&!isAdmin&&isPhysical&&!custom){
+    showError('Administrator Required','❌ Not running as Administrator!\n\nRaw physical disk access requires administrator rights.\n\nFIX:\n1. Close server / press Ctrl+C\n2. Right-click START_HERE.bat → "Run as Administrator"\n3. Refresh browser\n\nTip: You can scan disk image files (.img, .raw, .dd) without Administrator rights by clicking "✏️ Custom" above.');
+    sh('st-idle',0);sh('st-error',1);return;
+  }
   ST.scanning=true;ST.files=[];ST.sel.clear();ST.ec={};
   ST.counts={all:0,image:0,video:0,audio:0,document:0,archive:0,raw:0};
-  const dev=document.getElementById('drv').value||'//./PhysicalDrive1';
-  const out=document.getElementById('outd').value||'C:\\recovered';
+  const out=document.getElementById('outd').value||'RecoveredFiles';
   ST.currentDir=out.replace(/\\/g,'/');
   ST.deviceSizeBytes=(ST.driveSizes&&ST.driveSizes[dev])||0;
   // EaseUS-style: show the (initially empty) results grid right away instead

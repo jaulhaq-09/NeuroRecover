@@ -27,7 +27,8 @@ bool FragmentStitcher::stitch(const std::vector<Fragment>& fragments,
                                const std::string& extension,
                                const std::string& outPath) {
     if (fragments.empty()) return false;
-    fs::create_directories(outputDir_);
+    std::error_code ec;
+    fs::create_directories(outputDir_, ec);
     std::ofstream out(outPath, std::ios::binary | std::ios::app);
     if (!out) return false;
     // Naive: just concatenate in order; real implementation would validate

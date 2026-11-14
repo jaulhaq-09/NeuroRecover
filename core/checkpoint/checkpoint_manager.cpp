@@ -39,7 +39,8 @@ std::string CheckpointManager::escapeJSON(const std::string& s) const {
 }
 
 bool CheckpointManager::save(const CheckpointData& d) {
-    fs::create_directories(fs::path(path_).parent_path());
+    std::error_code ec;
+    fs::create_directories(fs::path(path_).parent_path(), ec);
     std::ofstream f(path_);
     if (!f) return false;
 

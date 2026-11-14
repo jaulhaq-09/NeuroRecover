@@ -29,7 +29,13 @@ RecoveryStats RecoveryEngine::run() {
     LOG_INFO("  Threads : " + std::to_string(config_.numThreads));
     LOG_INFO("═══════════════════════════════════════════");
 
-    fs::create_directories(config_.outputDir);
+    try {
+        fs::create_directories(config_.outputDir);
+    } catch (const std::exception& e) {
+        LOG_WARN("Could not create output directory " + config_.outputDir + " (" + e.what() + "), falling back to ./recovered_files");
+        const_cast<RecoveryConfig&>(config_).outputDir = "./recovered_files";
+        fs::create_directories(config_.outputDir);
+    }
 
     // ── Checkpoint resume ────────────────────────────────────────────────────
     uint64_t startOffset = config_.startOffset;
@@ -169,7 +175,13 @@ std::vector<CarvedFile> RecoveryEngine::phase0_filesystemRecover(
     Scanner scanner(config_);
     if (!scanner.open()) { LOG_ERROR("Filesystem recovery: cannot open device"); return recovered; }
 
-    fs::create_directories(config_.outputDir);
+    try {
+        fs::create_directories(config_.outputDir);
+    } catch (const std::exception& e) {
+        LOG_WARN("Could not create output directory " + config_.outputDir + " (" + e.what() + "), falling back to ./recovered_files");
+        const_cast<RecoveryConfig&>(config_).outputDir = "./recovered_files";
+        fs::create_directories(config_.outputDir);
+    }
     const uint64_t MAX_REASONABLE_SIZE = 4ULL * 1024 * 1024 * 1024; // 4GB safety cap
 
     auto wantExt = [&](const std::string& ext) {

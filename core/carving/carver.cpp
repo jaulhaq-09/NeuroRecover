@@ -551,7 +551,8 @@ std::string FileCarver::writeFile(const CarvedFile& cf, Scanner& scanner) {
     if (cf.size < 512) return "";
 
     std::string outPath = makeOutputPath(cf.extension);
-    fs::create_directories(config_.outputDir);
+    std::error_code ec;
+    fs::create_directories(config_.outputDir, ec);
 
     // Sector-aligned reads for Windows raw disk access (must be multiple of 512)
     const size_t SECTOR   = 512;

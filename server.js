@@ -18,7 +18,7 @@
  */
 
 const express  = require('express');
-const { spawn, execSync } = require('child_process');
+const { spawn, execSync, spawnSync } = require('child_process');
 const path     = require('path');
 const fs       = require('fs');
 const crypto   = require('crypto');
@@ -42,7 +42,9 @@ const BASH_LOCS = [
   'C:\\msys64\\usr\\bin\\bash.exe',
   'C:\\msys2\\usr\\bin\\bash.exe',
 ];
+const DEFAULT_OUT = path.join(process.env.USERPROFILE || 'C:\\', 'RecoveredFiles');
 const SEARCH_DIRS = [
+  DEFAULT_OUT,
   'C:/test_output','C:/recovered','C:/recovered2',
   'C:/out','C:/neurorecover_output',
 ];
@@ -125,41 +127,100 @@ const sseOpen = res => res.writeHead(200,{
 });
 const sseSend = res => obj => { try{res.write('data:'+JSON.stringify(obj)+'\n\n');}catch(_){} };
 
+function getSystemDrives() {
+  const drives = [];
+  if (process.platform === 'win32') {
+    try {
+      const psScript = `
+$out = @()
+try {
+  $disks = Get-CimInstance Win32_DiskDrive -ErrorAction Stop
+  foreach ($d in $disks) {
+    $id = $d.DeviceID -replace '^\\\\\\.\\\\',''
+    $isUSB = ($d.InterfaceType -like '*USB*' -or $d.MediaType -like '*Removable*')
+    $isSys = ($id.ToUpper() -eq 'PHYSICALDRIVE0')
+    $cap = if ($d.Caption) { $d.Caption } else { $id }
+    $out += [PSCustomObject]@{
+      caption = $cap
+      deviceId = '//./' + $id
+      size = [int64]$d.Size
+      isUSB = [bool]$isUSB
+      isSystem = [bool]$isSys
+      recommended = [bool]($isUSB -and -not $isSys)
+    }
+  }
+} catch {}
+try {
+  $vols = [System.IO.DriveInfo]::GetDrives()
+  foreach ($v in $vols) {
+    if ($v.IsReady) {
+      $letter = $v.Name.Substring(0,1)
+      $isUSB = ($v.DriveType.ToString() -eq 'Removable')
+      $isSys = ($letter.ToUpper() -eq 'C')
+      $lbl = if ($v.VolumeLabel) { "$($v.VolumeLabel) ($($v.Name))" } else { "Volume ($($v.Name))" }
+      $out += [PSCustomObject]@{
+        caption = $lbl
+        deviceId = '//./' + $letter + ':'
+        size = [int64]$v.TotalSize
+        isUSB = [bool]$isUSB
+        isSystem = [bool]$isSys
+        recommended = [bool]($isUSB -and -not $isSys)
+      }
+    }
+  }
+} catch {}
+$out | ConvertTo-Json -Compress
+`;
+      const b64 = Buffer.from(psScript, 'utf16le').toString('base64');
+      const res = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', b64], {
+        timeout: 10000,
+        encoding: 'utf8',
+        windowsHide: true,
+      });
+
+      if (res.stdout && res.stdout.trim()) {
+        const parsed = JSON.parse(res.stdout.trim());
+        const list = Array.isArray(parsed) ? parsed : (parsed ? [parsed] : []);
+        const seen = new Set();
+        for (const item of list) {
+          if (!item || !item.deviceId || seen.has(item.deviceId)) continue;
+          seen.add(item.deviceId);
+          drives.push({
+            caption: item.caption || item.deviceId,
+            deviceId: item.deviceId,
+            size: item.size || 0,
+            sizeStr: fmtSize(item.size || 0),
+            isUSB: !!item.isUSB,
+            isSystem: !!item.isSystem,
+            recommended: !!item.recommended,
+          });
+        }
+      }
+    } catch (_) {}
+  }
+
+  // Ensure default physical drives are present as presets if not detected
+  if (!drives.some(d => /physicaldrive/i.test(d.deviceId))) {
+    drives.unshift(
+      { caption: 'PhysicalDrive0 (System Disk)', deviceId: '//./PhysicalDrive0', size: 0, sizeStr: '?', isUSB: false, isSystem: true, recommended: false },
+      { caption: 'PhysicalDrive1 (USB/SD Card)', deviceId: '//./PhysicalDrive1', size: 0, sizeStr: '?', isUSB: true, isSystem: false, recommended: true }
+    );
+  }
+  return drives;
+}
+
 // ── GET /api/status ───────────────────────────────────────────────────────────
 app.get('/api/status',(req,res)=>res.json({
-  ok:true,version:'5.1.0',isAdmin:ADMIN,
+  ok:true,version:'5.1.0',isAdmin:isAdmin(),
   exeFound:exeOk(),exePath:findExe(),
   gccFound:!!findGcc(),msys2Found:!!findBash(),root:ROOT,
+  defaultOutputDir:DEFAULT_OUT,
 }));
 
 // ── GET /api/drives ───────────────────────────────────────────────────────────
 app.get('/api/drives',(req,res)=>{
-  const drives=[];
-  try {
-    if(process.platform==='win32'){
-      const raw=execSync('wmic diskdrive get Caption,DeviceID,Size,InterfaceType /format:csv 2>nul',
-        {timeout:8000,encoding:'utf8'});
-      raw.split('\n').forEach(line=>{
-        const p=line.trim().split(',');
-        if(p.length>=3&&p[1]&&p[1].toUpperCase().includes('PHYSICALDRIVE')){
-          const sz=parseInt(p[2])||0;
-          const id=p[1].trim().replace(/^\\\\\.\\/,'');
-          const isUSB=(p[3]||'').toLowerCase().includes('usb');
-          drives.push({
-            caption:(p[0]||'').trim()||id,
-            deviceId:'//./'+id,size:sz,sizeStr:fmtSize(sz),
-            isUSB,isSystem:id.toUpperCase()==='PHYSICALDRIVE0',
-            recommended:isUSB&&id.toUpperCase()!=='PHYSICALDRIVE0',
-          });
-        }
-      });
-    }
-  } catch {}
-  if(!drives.length){
-    drives.push({caption:'PhysicalDrive0 (System)',deviceId:'//./PhysicalDrive0',size:0,sizeStr:'?',isUSB:false,isSystem:true,recommended:false});
-    drives.push({caption:'PhysicalDrive1 (USB/SD)',deviceId:'//./PhysicalDrive1',size:0,sizeStr:'?',isUSB:true,isSystem:false,recommended:true});
-  }
-  res.json({drives,exeFound:exeOk(),isAdmin:ADMIN});
+  const drives = getSystemDrives();
+  res.json({drives,exeFound:exeOk(),isAdmin:isAdmin(),defaultOutputDir:DEFAULT_OUT});
 });
 
 // ── GET /api/thumb — serve actual recovered file as thumbnail ─────────────────
@@ -250,18 +311,28 @@ app.post('/api/scan',(req,res)=>{
   sseOpen(res); const send=sseSend(res);
   const {device,outputDir,types,deep,metadata,preview,checkpoint,resume,sqliteDeep} = req.body||{};
 
-  if(!ADMIN){
-    send({type:'need_admin',message:'❌ Not running as Administrator!\n\nRaw disk access requires admin rights.\n\nFIX:\n1. Press Ctrl+C to stop server\n2. Search PowerShell in Start Menu\n3. Right-click → "Run as Administrator"\n4. cd "C:\\Users\\mrove\\OneDrive\\Desktop\\NeuroRecover"\n5. node server.js\n6. Refresh browser'});
+  if(!device){send({type:'error',message:'No device selected'});return res.end();}
+
+  const isPhysical = /^((\/\/|\x5c\x5c)\.[\/\\]|physicaldrive|[a-z]:$)/i.test(device.trim());
+  const isRegularFile = fs.existsSync(device);
+
+  if(isPhysical && !isRegularFile && !isAdmin()){
+    send({type:'need_admin',message:'❌ Not running as Administrator!\n\nRaw disk access ('+device+') requires admin rights.\n\nFIX:\n1. Press Ctrl+C to stop server\n2. Open PowerShell as Administrator\n3. cd "'+ROOT+'"\n4. node server.js\n5. Refresh browser\n\nTip: You can scan disk image files (.img / .raw) without Administrator rights!'});
     return res.end();
   }
   if(!exeOk()){send({type:'need_build',message:'neurorecover.exe not found. Click Build Engine!'});return res.end();}
-  if(!device){send({type:'error',message:'No device selected'});return res.end();}
 
   // Output path — use backslashes for Windows mkdir, forward slashes for C++ args
-  const rawOut = winPath(outputDir||'C:\\recovered');
+  let rawOut = winPath(outputDir || DEFAULT_OUT);
+  try{
+    fs.mkdirSync(rawOut,{recursive:true});
+  }catch(e){
+    console.warn(`Cannot create ${rawOut}, falling back to ${DEFAULT_OUT}`);
+    rawOut = DEFAULT_OUT;
+    try { fs.mkdirSync(rawOut,{recursive:true}); }
+    catch(e2){send({type:'error',message:'Cannot create output folder: '+rawOut+'\n'+e2.message});return res.end();}
+  }
   const fwdOut = normPath(rawOut);
-  try{fs.mkdirSync(rawOut,{recursive:true});}
-  catch(e){send({type:'error',message:'Cannot create output folder: '+rawOut+'\n'+e.message});return res.end();}
 
   // Types
   let typesStr='all';

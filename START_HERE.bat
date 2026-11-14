@@ -1,5 +1,8 @@
 @echo off
-title NeuroRecover v3.0
+setlocal
+cd /d "%~dp0"
+
+title NeuroRecover v3.0 Launcher
 color 0B
 echo.
 echo  ============================================
@@ -7,37 +10,43 @@ echo    NeuroRecover v3.0 - Web UI Launcher
 echo  ============================================
 echo.
 
+:: Check for Administrator privileges
+net session >nul 2>&1
+if %ERRORLEVEL% NEQ 0 (
+    echo  [INFO] Requesting Administrator privileges for raw disk access...
+    powershell -NoProfile -Command "Start-Process cmd.exe -ArgumentList '/k', ('\"\"' + '%~f0' + '\"\"') -WorkingDirectory '%~dp0' -Verb RunAs"
+    exit /b 0
+)
+
 :: Check if Node.js is installed
 where node >nul 2>&1
 if %ERRORLEVEL% NEQ 0 (
-    echo  [ERROR] Node.js not installed!
+    echo  [ERROR] Node.js is not installed!
     echo.
-    echo  Please install from: https://nodejs.org
-    echo  Download LTS version, install, then run this again.
+    echo  Please install Node.js from: https://nodejs.org
+    echo  Download the LTS version, install it, then run this file again.
     echo.
     pause
     exit /b 1
 )
 
-:: Check if express is installed
+:: Check if dependencies are installed
 if not exist "node_modules\express\package.json" (
-    echo  Installing Express...
-    call npm install express --silent
-    echo  Express installed!
+    echo  [INFO] Installing Express and dependencies...
+    call npm install
     echo.
 )
 
-:: Kill any existing server on port 3000
+:: Check and build neurorecover.exe if needed
+if not exist "build\neurorecover.exe" (
+    echo  [INFO] Engine binary not found. Building now...
+    call build.bat
+    echo.
+)
+
+:: Free port 3000 if occupied
 for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":3000" 2^>nul') do (
     taskkill /PID %%a /F >nul 2>&1
-)
-
-:: Check if exe exists
-if not exist "build\neurorecover.exe" (
-    echo  [WARNING] neurorecover.exe not built yet!
-    echo  The UI will run in DEMO MODE.
-    echo  To enable real recovery, run build_windows.sh in MSYS2 first.
-    echo.
 )
 
 :: Open browser after 2 seconds

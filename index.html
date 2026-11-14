@@ -76,10 +76,17 @@
         <div class="ok-c" id="exeOk" style="display:none">✅ Engine ready</div>
 
         <div class="card">
-          <div class="clbl">Target Device</div>
-          <select class="csel" id="drv" style="margin-bottom:7px"></select>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <span class="clbl" style="margin:0">Target Device / Disk Image</span>
+            <button type="button" class="btn b-ghost b-sm" id="btnTogCustom" onclick="toggleCustomPath()" style="font-size:10px;padding:2px 6px">✏️ Custom</button>
+          </div>
+          <select class="csel" id="drv" style="margin-bottom:7px" onchange="onDriveSelect()"></select>
+          <div id="customPathWrap" style="display:none;margin-bottom:7px">
+            <input class="cinp" id="customDrv" placeholder="e.g. C:\path\to\disk.img or //./PhysicalDrive1" style="font-size:12px">
+            <div style="font-size:10px;color:var(--t3);margin-top:2px">Raw drive (//./PhysicalDrive1) or disk image (.img, .raw)</div>
+          </div>
           <div class="clbl" style="margin-top:2px">Output Folder</div>
-          <input class="cinp" id="outd" value="C:\recovered" style="margin-bottom:9px">
+          <input class="cinp" id="outd" value="" placeholder="C:\Users\...\RecoveredFiles" style="margin-bottom:9px">
           <button class="btn b-cy" style="width:100%;justify-content:center;margin-bottom:4px" id="scanBtn" onclick="doScan()">🔍 Start Full Scan</button>
           <div style="display:flex;gap:4px;margin-bottom:4px">
             <button class="btn b-ghost b-sm" style="flex:1;justify-content:center;font-size:10px" onclick="quickScan('photos')">📷 Photos</button>
